@@ -21,14 +21,17 @@
 #define LIMPO  0				//defines pros objetos do mapa
 #define MURO   1
 #define PALLET 2
-#define BOMBA  5
+#define BOMBA1 6
+#define BOMBA2 7
+
+#define TBOMBA 200
 
 typedef struct t_sprites
 {
 	ALLEGRO_BITMAP* sheet;
 
 	ALLEGRO_BITMAP* jogador[12];
-	ALLEGRO_BITMAP* mapa[6];
+	ALLEGRO_BITMAP* mapa[12];
 	ALLEGRO_BITMAP* inimigos[6];
 } t_sprites;
 
@@ -36,6 +39,7 @@ typedef struct t_quadrado
 {
 	int tipo;
 	int fogo;
+	int upgd;
 } t_quadrado;
 
 typedef struct t_mapa
@@ -43,7 +47,7 @@ typedef struct t_mapa
 	t_quadrado** m;				//matriz de quadrados
 } t_mapa;
 
-typedef struct t_monstro
+typedef struct t_monstro		
 {
 	int tipo;
 	int x;
@@ -140,9 +144,9 @@ void inicia_sprites ()
 		for (j=0 ; j<4 ; j++)
 			sprites.jogador[i*4 + j] = carrega_sprite(j*16, i*16, 16, 16);
 
-	for (i=0 ; i<2 ; i++)										//pega os sprites do mapa
-		for (j=0 ; j<3 ; j++)
-				sprites.mapa[i*3 + j] = carrega_sprite(j*16, 64+i*16, 16, 16);
+	for (i=0 ; i<3 ; i++)										//pega os sprites do mapa
+		for (j=0 ; j<4 ; j++)
+				sprites.mapa[i*4 + j] = carrega_sprite(j*16, 64+i*16, 16, 16);
 
 	for (i=0 ; i<2 ; i++)										//pega os sprites dos inimigos
 		for (j=0 ; j<4 ; j++)
@@ -169,7 +173,7 @@ void destroi_sprites ()
 				al_destroy_bitmap (sprites.inimigos[i*4 + j]);
 }
 
-void inicia_mapa ()
+void inicia_mapa (int *portal_y, int *portal_x)
 {
 	int i,j;
 	mapa.m = (t_quadrado **) malloc (11*sizeof(t_quadrado *));
@@ -181,7 +185,7 @@ void inicia_mapa ()
 	{
 		for (j=0 ; j<11 ; j++)
 		{
-			if (( (i % 2) == 1)&&( (j % 2) == 1))
+			if (( (i % 2) == 1)&&( (j % 2) == 1))		//parte que cria os muros e as pallets
 				mapa.m[i][j].tipo = MURO;
 			else
 			{
@@ -192,12 +196,42 @@ void inicia_mapa ()
 					mapa.m[i][j].tipo = LIMPO;
 			}
 			mapa.m[i][j].fogo = 0;
+
+			if ((mapa.m[i][j].tipo == PALLET) && (i > 1) && (j > 1))	//parte que poe os upgrades
+			{
+				chance = rand() % 5;
+				if (chance == 0)
+				{
+					chance = rand() % 2; 
+					if (chance == 0)
+						mapa.m[i][j].upgd = 1;
+					else
+						mapa.m[i][j].upgd = 2;
+				}
+				else
+					mapa.m[i][j].upgd = 0;
+			}
+			else
+				mapa.m[i][j].upgd = 0;
 		}
 	}
 
 	mapa.m[0][0].tipo = LIMPO;
 	mapa.m[0][1].tipo = LIMPO;
 	mapa.m[1][0].tipo = LIMPO;
+
+	i = rand() % 9 + 2;
+	j = rand() % 9 + 2;
+	while ((mapa.m[i][j].tipo != PALLET) || (mapa.m[i][j].upgd != 0))
+	{
+		i = rand() % 9 + 2;
+                j = rand() % 9 + 2;
+	}
+
+	*portal_y = i;
+	*portal_x = j;
+
+	mapa.m[i][j].upgd = 3;
 }
 
 void desenha_mapa ()
@@ -205,7 +239,27 @@ void desenha_mapa ()
 	int i,j;
 	for (i=0 ; i<11 ; i++)
 		for (j=0 ; j<11 ; j++)
-			al_draw_bitmap (sprites.mapa[ mapa.m[i][j].tipo ], 16 + j*16, 16 + i*16, 0);
+		{
+			if ((mapa.m[i][j].fogo == 0) || (mapa.m[i][j].fogo > 40))
+			{
+				if ((mapa.m[i][j].tipo != LIMPO) || (mapa.m[i][j].upgd == 0))
+					al_draw_bitmap (sprites.mapa[ mapa.m[i][j].tipo ], 16 + j*16, 16 + i*16, 0);
+				else
+				{
+					if ((mapa.m[i][j].upgd == 1) || (mapa.m[i][j].upgd == 2))
+						al_draw_bitmap (sprites.mapa[ 9 + mapa.m[i][j].upgd ], 16 + j*16, 16 + i*16, 0);
+					else
+						al_draw_bitmap (sprites.mapa[ 1 + mapa.m[i][j].upgd ], 16 + j*16, 16 + i*16, 0);
+				}
+			}
+			else
+			{
+				if ((mapa.m[i][j].fogo > 10)&&(mapa.m[i][j].fogo < 31))
+					al_draw_bitmap (sprites.mapa[ 8 ], 16 + j*16, 16 + i*16, 0);
+				else if (mapa.m[i][j].fogo < 41)
+					al_draw_bitmap (sprites.mapa[ 9 ], 16 + j*16, 16 + i*16, 0);
+			}
+		}
 }
 
 void pre_escrita_display ()
@@ -229,9 +283,19 @@ void destroi_final ()
 	al_destroy_event_queue  (queue  );
 }
 
-int testa_colisao (int x1, int y1, int dir)
+int testa_mapa (int y, int x, int naBomba)
 {
-	int x2 = x1 + 12;
+	if (mapa.m[y][x].tipo == LIMPO)
+		return 0;
+	else if (((mapa.m[y][x].tipo == BOMBA1) || (mapa.m[y][x].tipo == BOMBA2)) && (naBomba == 1))
+		return 0;
+	else
+		return 1;
+}
+
+int testa_colisao (int x1, int y1, int dir, int naBomba)
+{
+	int x2 = x1 + 12;										
 	int y2 = y1 + 15;
 	x1 += 3;
 	y1 += 1;
@@ -256,26 +320,26 @@ int testa_colisao (int x1, int y1, int dir)
 	switch (dir)
 	{
 		case (1):
-			if ((mapa.m[y1][x1].tipo != 0) || (mapa.m[y1][x2].tipo != 0))
+			if ((testa_mapa(y1, x1, naBomba)) || (testa_mapa(y1, x2, naBomba)))
 				return 1;
 
 		case (2):
-			if ((mapa.m[y2][x1].tipo != 0) || (mapa.m[y2][x2].tipo != 0))
+			if ((testa_mapa(y2, x1, naBomba)) || (testa_mapa(y2, x2, naBomba)))
                         	return 1;
 
 		case (3):
-			if ((mapa.m[y1][x1].tipo != 0) || (mapa.m[y2][x1].tipo != 0))
+			if ((testa_mapa(y1, x1, naBomba)) || (testa_mapa(y2, x1, naBomba)))
                         	return 1;
 
 		case (4):
-			if ((mapa.m[y1][x2].tipo != 0) || (mapa.m[y2][x2].tipo != 0))
+			if ((testa_mapa(y1, x2, naBomba)) || (testa_mapa(y2, x2, naBomba)))
                         	return 1;
 	}
 
 	return 0;
 }
 
-void interpreta_controle (unsigned char *keyb, int *x, int *y, int *fechar, int *dir, int *bomba)
+void interpreta_controle (unsigned char *keyb, int *x, int *y, int *fechar, int *dir, int *bomba, int naBomba)
 {
 	int aux_x = *x;
 	int aux_y = *y;
@@ -311,7 +375,7 @@ void interpreta_controle (unsigned char *keyb, int *x, int *y, int *fechar, int 
 
 	if (dir)
 	{
-		if (testa_colisao ( *x, *y, *dir))
+		if (testa_colisao ( *x, *y, *dir, naBomba))
 		{
 			*x = aux_x;
 			*y = aux_y;
@@ -354,21 +418,25 @@ void inicia_vbomba ()
 	}
 }
 
-void coloca_bomba (int *por_bomba, int x, int y)
+void coloca_bomba ( int x, int y, int *bomba)
 {
 	int quant;
-	*por_bomba = 0;
-	if (vbomba.quant < vbomba.max)		//!!! testar se ja tem bomba no lugar
+	if (vbomba.quant < vbomba.max)
 	{
 		quant = vbomba.quant;
-		vbomba.v[ quant ].x     = (x - 8)/16;
-		vbomba.v[ quant ].y     = (y - 8)/16;
-		vbomba.v[ quant ].tempo = 100;
+		if ((mapa.m[ (y - 8)/16 ][ (x - 8)/16 ].tipo != BOMBA1) && (mapa.m[ (y - 8)/16 ][ (x - 8)/16 ].tipo != BOMBA2))
+		{
+			vbomba.v[ quant ].x     = (x - 8)/16;
+			vbomba.v[ quant ].y     = (y - 8)/16;
+			vbomba.v[ quant ].tempo = TBOMBA;
 
-		mapa.m[ vbomba.v[ quant ].y ][ vbomba.v[ quant ].x ].tipo = BOMBA;
+			mapa.m[ vbomba.v[ quant ].y ][ vbomba.v[ quant ].x ].tipo = BOMBA1;
 
-		vbomba.quant++;
+			vbomba.quant++;
+		}
 	}
+	else
+		*bomba = 0;
 }
 
 void passa_tempo_bombas ()
@@ -377,7 +445,69 @@ void passa_tempo_bombas ()
 	for (i=0 ; i < vbomba.quant ; i++)
 	{
 		vbomba.v[i].tempo--;
+		if (( vbomba.v[i].tempo <= TBOMBA/4 ) && ( mapa.m[ vbomba.v[i].y ][ vbomba.v[i].x ].tipo != BOMBA2 ))
+			mapa.m[ vbomba.v[i].y ][ vbomba.v[i].x ].tipo = BOMBA2;
 	}
+}
+
+void passa_tempo_fogos  ()
+{
+	int i,j;
+	for (i=0 ; i < 11 ; i++)
+	{
+		for (j=0 ; j < 11 ; j++)
+		{
+			if (mapa.m[i][j].fogo != 0)
+				mapa.m[i][j].fogo--;
+			if ((mapa.m[i][j].fogo < 40) && (mapa.m[i][j].fogo > 0) && (mapa.m[i][j].tipo != LIMPO))
+				mapa.m[i][j].tipo = LIMPO;
+		}
+	}
+}
+
+void cria_explosao (int y, int x, int tamf, int dir)
+{
+	if (tamf == 0)
+        	return;
+
+	mapa.m[y][x].fogo = 40 + (vbomba.tamf - tamf + 1)*15;
+
+
+	if (dir == 1)
+	{
+		if ((y-1 >= 0)  && (mapa.m[y-1][x].tipo != MURO))
+                	cria_explosao (y-1, x, tamf-1, 1);
+	}
+	else if (dir == 2)
+	{
+		if ((y+1 <= 10) && (mapa.m[y+1][x].tipo != MURO))
+                	cria_explosao (y+1, x, tamf-1, 2);
+	}
+	else if (dir == 3)
+	{
+		if ((x-1 >= 0)  && (mapa.m[y][x-1].tipo != MURO))
+                	cria_explosao (y, x-1, tamf-1, 3);
+	}
+	else if (dir == 4)
+	{
+		if ((x+1 <= 10) && (mapa.m[y][x+1].tipo != MURO))
+                	cria_explosao (y, x+1, tamf-1, 4);
+	}
+}
+
+void inicia_explosoes (int y, int x, int tamf)
+{
+	mapa.m[y][x].fogo = 40;
+	mapa.m[y][x].tipo = LIMPO;
+
+	if ((y-1 >= 0)  && (mapa.m[y-1][x].tipo != MURO))
+		cria_explosao (y-1, x, tamf, 1);
+	if ((y+1 <= 10) && (mapa.m[y+1][x].tipo != MURO))
+		cria_explosao (y+1, x, tamf, 2);
+	if ((x-1 >= 0)  && (mapa.m[y][x-1].tipo != MURO))
+		cria_explosao (y, x-1, tamf, 3);
+	if ((x+1 <= 10) && (mapa.m[y][x+1].tipo != MURO))
+		cria_explosao (y, x+1, tamf, 4);
 }
 
 void explode_bombas ()
@@ -387,7 +517,8 @@ void explode_bombas ()
 	{
 		if (vbomba.v[i].tempo == 0)
 		{
-			//*a lógica da explosão vai aqui
+			inicia_explosoes (vbomba.v[ i ].y, vbomba.v[ i ].x, vbomba.tamf);
+			mapa.m[ vbomba.v[ i ].y ][ vbomba.v[ i ].x ].tipo = LIMPO;
 			vbomba.v[i].x = 0;
 			vbomba.v[i].y = 0;
 			for (j=i ; j < vbomba.quant-1 ; j++)
@@ -396,10 +527,129 @@ void explode_bombas ()
 				vbomba.v[j].y     = vbomba.v[j+1].y;
 				vbomba.v[j].tempo = vbomba.v[j+1].tempo;
 			}
-			mapa.m[ vbomba.v[ i ].y ][ vbomba.v[ i ].x ].tipo = LIMPO;
 			vbomba.quant--;
 		}
 	}
+}
+
+void verifica_na_bomba (int *porBomba, int *naBomba, int jogador_x, int jogador_y)
+{
+	jogador_x -= 16;
+	jogador_y -= 16;
+	if ((*porBomba == 1) || (*naBomba == 1))
+	{
+		if (((jogador_x + 3)/16 == vbomba.v[ vbomba.quant-1 ].x) && ((jogador_y + 5)/16 == vbomba.v[ vbomba.quant-1 ].y) || ((jogador_x + 12)/16 == vbomba.v[ vbomba.quant-1 ].x) && ((jogador_y + 15)/16 == vbomba.v[ vbomba.quant-1 ].y))
+		{				//!! melhorar essa verificação
+			*naBomba = 1;
+			*porBomba = 0;
+		}
+		else
+			*naBomba = 0;
+	}
+}
+
+int testa_queimadura (int y, int x)
+{
+	if ((mapa.m[y][x].fogo > 0) && (mapa.m[y][x].fogo < 41))
+		return 1;
+	else
+		return 0;
+}
+
+void testa_morte (int y1, int x1, int *morte, int *vidas, int *imune)
+{
+	int x2 = x1 + 12;										
+        int y2 = y1 + 15;
+        x1 += 3;
+        y1 += 5;
+
+        x1 -= 16;
+        x2 -= 16;
+        y1 -= 16;
+        y2 -= 16;
+                                                                                                        
+        //temos os dois cantos, sup esq e inf dir, do sprite do jogador;
+                                                                                                        
+        x1 /= 16;
+        x2 /= 16;
+        y1 /= 16;
+        y2 /= 16;
+
+	if (testa_queimadura (y1,x1) || testa_queimadura (y1,x2) || testa_queimadura (y2,x1) || testa_queimadura (y2,x2))
+	{
+		*vidas -= 1;
+		*imune = 150;
+	}
+
+	if (*vidas <= 0)
+		*morte = 1;
+}
+
+int testa_colisao_upgd (int y, int x, int upgd)
+{
+	if (mapa.m[y][x].upgd == upgd)
+		return 1;
+        else
+        	return 0;
+}
+
+void limpa_upgrades (int y1, int y2, int x1, int x2)
+{
+	mapa.m[y1][x1].upgd = 0;
+	mapa.m[y2][x1].upgd = 0;
+	mapa.m[y1][x2].upgd = 0;
+	mapa.m[y2][x2].upgd = 0;
+}
+
+void testa_upgrades (int y1, int x1)
+{
+	int x2 = x1 + 12;										
+        int y2 = y1 + 15;
+        x1 += 3;
+        y1 += 5;
+                                                                                                        
+        x1 -= 16;
+        x2 -= 16;
+        y1 -= 16;
+        y2 -= 16;
+                                                                                                        
+        //temos os dois cantos, sup esq e inf dir, do sprite do jogador;
+                                                                                                        
+        x1 /= 16;
+        x2 /= 16;
+        y1 /= 16;
+        y2 /= 16;
+
+	if (testa_colisao_upgd (y1,x1,1) || testa_colisao_upgd (y1,x2,1) || testa_colisao_upgd (y2,x1,1) || testa_colisao_upgd (y2,x2,1))
+	{
+		vbomba.tamf++;
+		limpa_upgrades (y1, y2, x1, x2);
+	}
+	if (testa_colisao_upgd (y1,x1,2) || testa_colisao_upgd (y1,x2,2) || testa_colisao_upgd (y2,x1,2) || testa_colisao_upgd (y2,x2,2))
+	{
+		vbomba.max++;
+		limpa_upgrades (y1, y2, x1, x2);
+	}
+}
+
+void inicia_vmonstros ()
+{
+	vmonstros.quant = 0;
+	vmonstros.v     = (t_monstro *) malloc (5 * sizeof (t_monstro));
+
+	int i;
+	for (i=0 ; i<5 ; i++)
+	{
+		vmonstros.v[i].tipo = 0;
+		vmonstros.v[i].x    = 0;
+		vmonstros.v[i].y    = 0;
+	}
+}
+
+void liga_portal (int y, int x)
+{
+	if (vmonstros.quant == 0)
+		mapa.m[y][x].upgd = 4;
 }
 
 int main ()
@@ -416,15 +666,25 @@ int main ()
 
 	ALLEGRO_EVENT event;
 
-	int jogador_x = 16;
+	int jogador_x = 16;		//variaveis que guardam a coordenada atual do jogador
 	int jogador_y = 16;
-	int pre_x     = 16;
+	int pre_x     = 16;		//variaveis que guardam a coordenada do frame anterior do jogador
 	int pre_y     = 16;
-	int dir       = 2;
-	int frame     = 0;
-	int contframe = 0;
+	int vidas     = 3;		//guarda quantas vidas o jogador tem
+        int imune     = 0;		//controla a imunidade do jogador após receber um dano
 
-	int por_bomba = 0;
+	int dir       = 2;		//guarda a direção para onde o player ta se mexendo
+	int frame     = 0;		//guarda qual variação do frame de movimento do jogador deve ser exibido
+	int contframe = 0;		//conta os frames para trocar a variação de frame que será exibido
+	int morte     = 0;		//guarda se o jogador morreu
+	int passou    = 0;		//guarda se o jogador passou de fase
+	int fase      = 1;		//guarda a fase em que o jogador esta
+
+	int portal_x  = 0;		//variaveis que guardam a coordenada do portal
+	int portal_y  = 0;
+
+	int porBomba  = 0;		//flag para por bomba
+	int naBomba   = 0;		//flag que detecta se o player ainda está no quadrado da boma após colocá-la
 	inicia_vbomba ();
 
 	srand(time(0));
@@ -434,60 +694,75 @@ int main ()
 
 	/*Loop do jogo--------------------------------------------------------------------------------------------------*/
 
-	inicia_mapa();
+	inicia_vmonstros ();
+	inicia_mapa (&portal_y, &portal_x);
 	al_start_timer (timer);
-	while (1)
+	while ((! fechar) && (! morte))	//loop do jogo inteiro com menu e tudo
 	{
-		al_wait_for_event (queue, &event);
-
-		switch (event.type)
+		while ((! morte) && (! fechar))		//loop do jogo com as fases
 		{
-			case ALLEGRO_EVENT_TIMER:
+			while ((!morte) && (! fechar) && (! passou))
+			{
+				al_wait_for_event (queue, &event);
+
+				switch (event.type)
+				{
+					case ALLEGRO_EVENT_TIMER:
 			
-				pre_x = jogador_x;
-				pre_y = jogador_y;
+						pre_x = jogador_x;
+						pre_y = jogador_y;
+	
+						interpreta_controle (keyb, &jogador_x, &jogador_y, &fechar, &dir, &porBomba, naBomba);
+	
+						contframe++;
+						anima_jogador (&contframe, &frame, pre_x, pre_y, jogador_x, jogador_y);
+					
+						if (porBomba)
+							coloca_bomba (jogador_x, jogador_y, &porBomba);
 
-				interpreta_controle (keyb, &jogador_x, &jogador_y, &fechar, &dir, &por_bomba);
+						verifica_na_bomba (&porBomba, &naBomba, jogador_x, jogador_y);
+						passa_tempo_bombas ();
+						passa_tempo_fogos  ();
+						explode_bombas();
 
-				contframe++;
-				anima_jogador (&contframe, &frame, pre_x, pre_y, jogador_x, jogador_y);
-				
-				if (por_bomba)
-					coloca_bomba (&por_bomba, jogador_x, jogador_y);
-				passa_tempo_bombas ();
-				explode_bombas();
+						if (imune == 0)
+							testa_morte (jogador_y, jogador_x, &morte, &vidas, &imune);
+						else
+							imune--;
+
+						testa_upgrades (jogador_y, jogador_x);
+						liga_portal    (portal_y , portal_x);
                                                                 
-				desenha = 1;
-				break;
+						desenha = 1;
+						break;
+	
+					case ALLEGRO_EVENT_KEY_DOWN:
+	        				keyb[event.keyboard.keycode] = KEY_VISTA | KEY_SOLTA;	//!!!!! entender melhor isso
+        					break;
 
-			case ALLEGRO_EVENT_KEY_DOWN:
-        			keyb[event.keyboard.keycode] = KEY_VISTA | KEY_SOLTA;	//!!!!! entender melhor isso
-        			break;
+		   	 		case ALLEGRO_EVENT_KEY_UP:
+        					keyb[event.keyboard.keycode] &= KEY_SOLTA;
+	        				break;
 
-   	 		case ALLEGRO_EVENT_KEY_UP:
-        			keyb[event.keyboard.keycode] &= KEY_SOLTA;
-        			break;
+					case ALLEGRO_EVENT_DISPLAY_CLOSE:
+						fechar = 1;
+						break;
+				}
 
-			case ALLEGRO_EVENT_DISPLAY_CLOSE:
-				fechar = 1;
-				break;
-		}
-
-		if (fechar)
-			break;		//sai do loop do jogo
-
-		if ((desenha) && (al_is_event_queue_empty (queue)))
-		{
-			pre_escrita_display ();
+				if ((desenha) && (al_is_event_queue_empty (queue)))
+				{
+					pre_escrita_display ();
                         
-			al_clear_to_color (al_map_rgb(0, 0, 0));
-			desenha_mapa();
-			al_draw_textf(font, al_map_rgb(255, 255, 255), 0, 0, 0, "X: %d Y: %d QB: %d TB: %d", jogador_x, jogador_y, vbomba.quant, vbomba.v[0].tempo);
-			al_draw_bitmap (sprites.jogador[ dir-1 + 4*frame ], jogador_x, jogador_y, 0);
-
-                        pos_escrita_display ();
-
-			desenha = 0;
+					al_clear_to_color (al_map_rgb(0, 0, 0));
+					desenha_mapa();
+					al_draw_textf(font, al_map_rgb(255, 255, 255), 0, 0, 0, "X: %d Y: %d IM: %d VI: %d", jogador_x, jogador_y, imune, vidas);
+					al_draw_bitmap (sprites.jogador[ dir-1 + 4*frame ], jogador_x, jogador_y, 0);
+	
+                	        	pos_escrita_display ();
+		
+					desenha = 0;
+				}
+			}	
 		}
 	}
 
