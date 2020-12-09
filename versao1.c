@@ -32,7 +32,7 @@ typedef struct t_sprites
 
 	ALLEGRO_BITMAP* jogador[12];
 	ALLEGRO_BITMAP* mapa[12];
-	ALLEGRO_BITMAP* inimigos[6];
+	ALLEGRO_BITMAP* monstros[6];
 } t_sprites;
 
 typedef struct t_quadrado
@@ -49,6 +49,7 @@ typedef struct t_mapa
 
 typedef struct t_monstro		
 {
+	int dir;
 	int tipo;
 	int x;
 	int y;
@@ -151,7 +152,7 @@ void inicia_sprites ()
 	for (i=0 ; i<2 ; i++)										//pega os sprites dos inimigos
 		for (j=0 ; j<4 ; j++)
 			if (((i == 0)&&(j < 4)) || ((i == 1)&&(j <2)))
-                        	sprites.inimigos[i*4 + j] = carrega_sprite(j*16, 128+i*16, 16, 16);
+                        	sprites.monstros[i*4 + j] = carrega_sprite(j*16, 128+i*16, 16, 16);
 }
 
 void destroi_sprites ()
@@ -170,12 +171,12 @@ void destroi_sprites ()
         for (i=0 ; i<2 ; i++)							//destroi os sprites dos inimigos
         	for (j=0 ; j<4 ; j++)
         		if (((i == 0)&&(j < 4)) || ((i == 1)&&(j <2)))
-				al_destroy_bitmap (sprites.inimigos[i*4 + j]);
+				al_destroy_bitmap (sprites.monstros[i*4 + j]);
 }
 
 void inicia_mapa (int *portal_y, int *portal_x)
 {
-	int i,j;
+	int i,j;								
 	mapa.m = (t_quadrado **) malloc (11*sizeof(t_quadrado *));
 	for (i=0 ; i<11 ; i++)
 		mapa.m[i] = (t_quadrado *) malloc (11*sizeof(t_quadrado));
@@ -409,7 +410,7 @@ void inicia_vbomba ()
 	vbomba.quant = 0;
 	vbomba.tamf  = 1;
 	vbomba.v = (t_bomba *) malloc (5 * sizeof(t_bomba));
-	int i;
+	int i;					
 	for (i=0 ; i<5 ; i++)
 	{
 		vbomba.v[i].tempo = 0;
@@ -421,7 +422,7 @@ void inicia_vbomba ()
 void coloca_bomba ( int x, int y, int *bomba)
 {
 	int quant;
-	if (vbomba.quant < vbomba.max)
+	if (vbomba.quant < vbomba.max) 
 	{
 		quant = vbomba.quant;
 		if ((mapa.m[ (y - 8)/16 ][ (x - 8)/16 ].tipo != BOMBA1) && (mapa.m[ (y - 8)/16 ][ (x - 8)/16 ].tipo != BOMBA2))
@@ -603,7 +604,7 @@ void limpa_upgrades (int y1, int y2, int x1, int x2)
 
 void testa_upgrades (int y1, int x1)
 {
-	int x2 = x1 + 12;										
+	int x2 = x1 + 12;							
         int y2 = y1 + 15;
         x1 += 3;
         y1 += 5;
@@ -627,7 +628,8 @@ void testa_upgrades (int y1, int x1)
 	}
 	if (testa_colisao_upgd (y1,x1,2) || testa_colisao_upgd (y1,x2,2) || testa_colisao_upgd (y2,x1,2) || testa_colisao_upgd (y2,x2,2))
 	{
-		vbomba.max++;
+		if (vbomba.max < 5)
+			vbomba.max++;
 		limpa_upgrades (y1, y2, x1, x2);
 	}
 }
@@ -635,14 +637,14 @@ void testa_upgrades (int y1, int x1)
 void inicia_vmonstros ()
 {
 	vmonstros.quant = 0;
-	vmonstros.v     = (t_monstro *) malloc (5 * sizeof (t_monstro));
 
 	int i;
 	for (i=0 ; i<5 ; i++)
 	{
+		vmonstros.v[i].tipo = 1;
 		vmonstros.v[i].tipo = 0;
-		vmonstros.v[i].x    = 0;
 		vmonstros.v[i].y    = 0;
+		vmonstros.v[i].x    = 0;
 	}
 }
 
@@ -650,6 +652,175 @@ void liga_portal (int y, int x)
 {
 	if (vmonstros.quant == 0)
 		mapa.m[y][x].upgd = 4;
+}
+
+int verifica_passou (int y1, int x1, int p_y, int p_x)
+{
+	int x2 = x1 + 12;							
+        int y2 = y1 + 15;
+        x1 += 3;
+        y1 += 5;
+                                                                                
+        x1 -= 16;
+        x2 -= 16;
+        y1 -= 16;
+        y2 -= 16;
+                                                                                
+        //temos os dois cantos, sup esq e inf dir, do sprite do jogador;
+                                                                                
+        x1 /= 16;
+        x2 /= 16;
+        y1 /= 16;
+        y2 /= 16;
+
+	if (testa_colisao_upgd(y1,x1,4) || testa_colisao_upgd(y1,x2,4) || testa_colisao_upgd(y2,x1,4) || testa_colisao_upgd(y2,x2,4))
+		return 1;
+	else
+		return 0;
+}
+
+void malloc_mapa_vbomba_vmonstros()
+{
+	vbomba.v = (t_bomba *) malloc (5 * sizeof(t_bomba));
+	vmonstros.v     = (t_monstro *) malloc (5 * sizeof (t_monstro));
+
+	int i,j;								
+        mapa.m = (t_quadrado **) malloc (11*sizeof(t_quadrado *));
+        for (i=0 ; i<11 ; i++)
+        	mapa.m[i] = (t_quadrado *) malloc (11*sizeof(t_quadrado));
+}
+
+void reseta_vbomba ()
+{
+	int i;					
+	for (i=0 ; i<5 ; i++)
+	{
+		vbomba.v[i].tempo = 0;
+		vbomba.v[i].x     = 0;
+		vbomba.v[i].y     = 0;
+	}
+}
+
+int tem_monstro (int i, int y, int x)
+{
+	int j;
+	for (j=0 ; j<i ; j++)
+	{
+		if ((y == vmonstros.v[j].y) && (x == vmonstros.v[j].x))
+			return 1;
+	}
+
+	return 0;
+}
+
+void cria_monstros (int fase)
+{
+	int quant1 = 0;		//quantidade de cada tipo de bicho
+	int quant2 = 0;
+	int quant3 = 0;
+
+	if (fase < 3)
+	{
+		if (fase == 1)
+			quant1 = 3;
+		else
+			quant1 = 2;
+	}
+	else
+		quant1 = 6 - fase;
+
+	if (fase == 2)
+		quant2 = 1;
+	else if (fase > 2)
+		quant2 = 2;
+
+	if (fase == 4)
+		quant3 = 1;
+	else if (fase == 5)
+		quant3 = 2;
+
+	vmonstros.quant = quant1 + quant2 + quant3;
+
+	//definido o tanto de inimigos que terao na fase, vamos cria-los
+	
+
+	int i,x,y;
+	for (i=0 ; i < vmonstros.quant ; i++)
+	{
+		if (i < quant1)
+			vmonstros.v[i].tipo = 1;
+		else if (i < quant1 + quant2)
+			vmonstros.v[i].tipo = 2;
+		else
+			vmonstros.v[i].tipo = 3;
+
+		y = rand() % 9 + 2;
+		x = rand() % 9 + 2;
+
+		while ((mapa.m[y][x].tipo != LIMPO) || (tem_monstro (i,y,x)))
+		{
+			y = rand() % 9 + 2;
+                        x = rand() % 9 + 2;
+		}
+
+		vmonstros.v[i].y = y;
+		vmonstros.v[i].x = x;
+
+	}
+
+	for (i=0 ; i < vmonstros.quant ; i++)
+	{
+		vmonstros.v[i].y += 1;
+                vmonstros.v[i].x += 1;
+		vmonstros.v[i].y = 16 * vmonstros.v[i].y;
+		vmonstros.v[i].x = 16 * vmonstros.v[i].x;
+	}
+}
+
+void desenha_monstros()
+{
+	int i;
+	for (i=0 ; i < vmonstros.quant ; i++)
+		al_draw_bitmap (sprites.monstros[ 2*( vmonstros.v[i].tipo - 1 ) ], vmonstros.v[i].x, vmonstros.v[i].y, 0);
+}
+
+void mata_monstros ()
+{
+	int i,j;
+	int y1,y2,x1,x2;
+	for (i=0 ; i < vmonstros.quant ; i++)
+	{
+		x1 = vmonstros.v[i].x     ;
+		y1 = vmonstros.v[i].y     ;
+		x2 = vmonstros.v[i].x + 12;							
+                y2 = vmonstros.v[i].y + 15;
+                x1 += 3;
+                y1 += 5;
+                                                                                        
+                x1 -= 16;
+                x2 -= 16;
+                y1 -= 16;
+                y2 -= 16;
+                                                                                        
+                //temos os dois cantos, sup esq e inf dir, do sprite do jogador;
+                                                                                        
+                x1 /= 16;
+                x2 /= 16;
+                y1 /= 16;
+                y2 /= 16;
+
+		if (testa_queimadura (y1,x1) || testa_queimadura (y1,x2) || testa_queimadura (y2,x1) || testa_queimadura (y2,x2))
+		{
+			vmonstros.quant--;
+			for (j=i ; j < vmonstros.quant ; j++)
+			{
+				vmonstros.v[i].dir  = vmonstros.v[i+1].dir ;
+				vmonstros.v[i].x    = vmonstros.v[i+1].x   ;
+				vmonstros.v[i].y    = vmonstros.v[i+1].y   ;
+				vmonstros.v[i].tipo = vmonstros.v[i+1].tipo;
+			}
+		}
+	}
 }
 
 int main ()
@@ -685,7 +856,6 @@ int main ()
 
 	int porBomba  = 0;		//flag para por bomba
 	int naBomba   = 0;		//flag que detecta se o player ainda está no quadrado da boma após colocá-la
-	inicia_vbomba ();
 
 	srand(time(0));
 
@@ -694,13 +864,18 @@ int main ()
 
 	/*Loop do jogo--------------------------------------------------------------------------------------------------*/
 
+	malloc_mapa_vbomba_vmonstros();
+	inicia_vbomba ();
 	inicia_vmonstros ();
-	inicia_mapa (&portal_y, &portal_x);
 	al_start_timer (timer);
 	while ((! fechar) && (! morte))	//loop do jogo inteiro com menu e tudo
 	{
 		while ((! morte) && (! fechar))		//loop do jogo com as fases
 		{
+			inicia_mapa (&portal_y, &portal_x);
+			reseta_vbomba ();
+			cria_monstros (fase);
+
 			while ((!morte) && (! fechar) && (! passou))
 			{
 				al_wait_for_event (queue, &event);
@@ -725,6 +900,8 @@ int main ()
 						passa_tempo_fogos  ();
 						explode_bombas();
 
+						mata_monstros();
+
 						if (imune == 0)
 							testa_morte (jogador_y, jogador_x, &morte, &vidas, &imune);
 						else
@@ -732,6 +909,9 @@ int main ()
 
 						testa_upgrades (jogador_y, jogador_x);
 						liga_portal    (portal_y , portal_x);
+
+						if (mapa.m[portal_y][portal_x].upgd == 4)
+							passou = verifica_passou (jogador_y, jogador_x, portal_y, portal_x);
                                                                 
 						desenha = 1;
 						break;
@@ -755,14 +935,25 @@ int main ()
                         
 					al_clear_to_color (al_map_rgb(0, 0, 0));
 					desenha_mapa();
-					al_draw_textf(font, al_map_rgb(255, 255, 255), 0, 0, 0, "X: %d Y: %d IM: %d VI: %d", jogador_x, jogador_y, imune, vidas);
+					al_draw_textf(font, al_map_rgb(255, 255, 255), 0, 0, 0, "TIPO: %d Y: %d YM: %d XM: %d", mapa.m[0][2].tipo , jogador_y, (vmonstros.v[0].y / 16) - 1, (vmonstros.v[0].x / 16) - 1);
+					desenha_monstros();
 					al_draw_bitmap (sprites.jogador[ dir-1 + 4*frame ], jogador_x, jogador_y, 0);
 	
                 	        	pos_escrita_display ();
 		
 					desenha = 0;
 				}
-			}	
+			}
+
+			if (passou)
+				fase++;
+
+			if (fase > 5)
+				fechar = 1;
+
+			passou = 0;	
+			jogador_x = 16;
+			jogador_y = 16;
 		}
 	}
 
