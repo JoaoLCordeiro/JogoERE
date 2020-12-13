@@ -1,5 +1,5 @@
-#include "libDesenha.h"
 #include "libDefine.h"
+#include "libDesenha.h"
 
 void pre_escrita_display ()
 {
@@ -34,10 +34,14 @@ void desenha_mapa ()
 			}
 			else								//se for explosao
 			{
-				if ((mapa.m[i][j].fogo > 10)&&(mapa.m[i][j].fogo < 31))			//printa o fogo menor
+				if ((mapa.m[i][j].fogo > 10)&&(mapa.m[i][j].fogo < 31))			//printa o fogo maior
 					al_draw_bitmap (sprites.mapa[ 8 ], 16 + j*16, 16 + i*16, 0);
-				else if (mapa.m[i][j].fogo < 41)					//printa o fogo maior
+				else if (mapa.m[i][j].fogo < 41)					//printa o fogo menor
+				{
 					al_draw_bitmap (sprites.mapa[ 9 ], 16 + j*16, 16 + i*16, 0);
+					if (mapa.m[i][j].fogo == 40)
+						al_play_sample (sExplosao, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+				}
 			}
 		}
 }
@@ -72,7 +76,7 @@ void desenha_monstros(int contframe)
 
 void desenha_jogador (int imune, int jogador_y, int jogador_x, int frame, int dir)
 {						//essa funcao desenha o personagem mais transparente se tiver imune e opaco se nao tiver
-	if (imune == 0)
+	if (imune == 0)	
         	al_draw_bitmap (sprites.jogador[ dir-1 + 4*frame ], jogador_x, jogador_y, 0);
         else
         	al_draw_tinted_bitmap (sprites.jogador[ dir-1 + 4*frame], al_map_rgba_f (0.7, 0.7, 0.7, 0.5), jogador_x, jogador_y, 0);

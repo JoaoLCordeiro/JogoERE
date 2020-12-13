@@ -10,27 +10,11 @@
 
 #include "libDefine.h"
 
-ALLEGRO_DISPLAY* 	display;	
-ALLEGRO_BITMAP*  	buffer;
-ALLEGRO_TIMER*   	timer;
-ALLEGRO_EVENT_QUEUE*	queue;
-ALLEGRO_FONT*		font;
-ALLEGRO_BITMAP* 	hud;
-ALLEGRO_BITMAP*  	menu;
-
-t_sprites 		sprites;
-t_mapa 	  		mapa;
-t_vmonstros		vmonstros;
-t_vbomba		vbomba;
-int 			pontos;
-
 #include "libTeste.h"
+#include "libGeral.h"
 #include "libBomMon.h"
 #include "libDesenha.h"
-#include "libGeral.h"
 #include "libInit.h"
-
-//Variáveis globais
 
 int main ()
 {
@@ -40,6 +24,8 @@ int main ()
 	al_register_event_source (queue, al_get_keyboard_event_source ());
 	al_register_event_source (queue, al_get_display_event_source (display));
 	al_register_event_source (queue, al_get_timer_event_source (timer));
+
+	/*parte das variáveis-------------------------------------------------------------------------------------------*/
 
 	int fechar  = 0;
 	int desenha = 1;
@@ -63,6 +49,7 @@ int main ()
 	int pausa     = 0;
 	int ajuda     = 0;
 	int sair      = 0;
+	int code      = 0;
 
 	int portal_x  = 0;		//variaveis que guardam a coordenada do portal
 	int portal_y  = 0;
@@ -75,17 +62,34 @@ int main ()
 	unsigned char keyb[ALLEGRO_KEY_MAX];
 	memset (keyb, 0, ALLEGRO_KEY_MAX * sizeof(unsigned char));
 
+	FILE* score;
+	score = fopen ("./resources/score.txt","r");
+
+	if (! score)
+	{
+		score = freopen ("./resources/score.txt","w+");
+		inicia_score (score);
+	}
+
+	/*--------------------------------------------------------------------------------------------------------------*/
+
 	/*Loop do jogo--------------------------------------------------------------------------------------------------*/
 
 	malloc_mapa_vbomba_vmonstros();
 	inicia_vbomba ();
 	inicia_vmonstros ();
 	al_start_timer (timer);
-	while ((! fechar) && (! morte))	//loop do jogo inteiro com menu e tudo
+	while (! fechar)	//loop do jogo inteiro com menu e tudo
 	{
 		pontos = 0;
 
-		faz_menu (&fechar, keyb, &event);
+		faz_menu (&fechar, keyb, &event, &code);
+
+		if (code)
+		{
+			vbomba.max  = 5 ;
+			vbomba.tamf = 10;
+		}
 
 		while ((! morte) && (! sair))		//loop do jogo com as fases
 		{
@@ -97,7 +101,7 @@ int main ()
 			{
 				pre_escrita_display();
 				
-				al_draw_filled_rectangle (0, 0, 208, 208, al_map_rgb_f(0, 0, 0));
+				al_draw_filled_rectangle (0, 0, 208, 208, al_map_rgb_f(0, 0, 0));		
 				al_draw_textf(font, al_map_rgb(255, 255, 255), 83, 100, 0, "FASE %d", fase);
 				contfrmj++;
 
@@ -169,7 +173,7 @@ int main ()
 		   	 		case ALLEGRO_EVENT_KEY_UP:
         					keyb[event.keyboard.keycode] &= KEY_SOLTA;
 	        				break;
-				}
+				}	
 
 				if ((desenha) && (al_is_event_queue_empty (queue)))
 				{
@@ -188,6 +192,25 @@ int main ()
 				}
 			}
 
+			if (morte)
+			{
+				contfrmj = 0;
+				while (contfrmj != 180)
+				{
+					pre_escrita_display();
+
+					al_draw_filled_rectangle (0, 0, 208, 208, al_map_rgb_f(0, 0, 0));
+					al_draw_textf (font, al_map_rgb(255, 255, 255), 40, 50, 0, "VOCE FOI DESTRUIDO");
+					if (contfrmj < 120)
+						al_draw_bitmap (sprites.jogador[ 7 +  contfrmj/30 ], 96, 96, 0);
+					else
+						al_draw_bitmap (sprites.jogador[11], 96, 96, 0);
+
+					pos_escrita_display();
+					contfrmj++;
+				}
+			}
+
 			if (passou)
 			{
 				pontos += 1000;
@@ -196,12 +219,30 @@ int main ()
 			}
 
 			if (fase > 5)
+			{
+				contfrmj = 60;
+				while (contfrmj != 0)
+				{
+					pre_escrita_display();
+
+					al_draw_filled_rectangle (0, 0, 208, 208, al_map_rgb_f(0, 0, 0));
+					if (code)
+						al_draw_textf(font, al_map_rgb(255, 255, 255), 30, 100, 0, "TRAPACEADOR NAO VENCE");
+					else
+                                        	al_draw_textf(font, al_map_rgb(255, 255, 255), 30, 100, 0, "OS REBELDES VENCERAM!");
+
+					pos_escrita_display();
+					contfrmj--;
+				}
 				sair = 1;
+			}
 
 			passou = 0;	
 			jogador_x = 16;
 			jogador_y = 16;
 		}
+		morte = 0;
+		fase = 0;
 	}
 
 	destroi_sprites();

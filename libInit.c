@@ -1,5 +1,6 @@
-#include "libInit.h"
 #include "libDefine.h"
+#include <stdio.h>
+#include "libInit.h"
 
 ALLEGRO_BITMAP* carrega_sprite (int x, int y, int w, int h)
 {
@@ -14,7 +15,7 @@ void inicializa_geral (bool resultado, const char *testado)
 		return;
 	else
 	{
-		fprintf (stderr, "Erro ao inicializar %s\n", testado);
+		fprintf (stderr,"Erro ao inicializar %s\n", testado);
 		exit (1);
 	}
 }
@@ -39,16 +40,26 @@ void inicia_comeco ()
 	font    = al_create_builtin_font ();
 	inicializa_geral (font   , "font"   );
 
-	inicializa_geral (al_init_primitives_addon(), "primitives");	//inicializa o primitives
+	inicializa_geral (al_install_audio(), "audio");			//inicia o audio
+	inicializa_geral (al_init_acodec_addon(), "acodec");
+	inicializa_geral (al_reserve_samples(16), "reserve samples");
+	inicializa_geral (al_init_primitives_addon(), "primitives");	//inicializa as imagens
 	inicializa_geral (al_init_image_addon(), "image addon");
+
+	sRobo     = al_load_sample ("./resources/robomorte.wav");	//inicializa os sons
+	sExplosao = al_load_sample ("./resources/explosao.wav" );
+	sBomba	  = al_load_sample ("./resources/bomba.wav"    );
+	inicializa_geral (sRobo    , "sample robo"    );
+	inicializa_geral (sExplosao, "sample explosao");
+	inicializa_geral (sBomba   , "sample bomba"   );
 }
 
 void inicia_sprites ()
 {
-	sprites.sheet = al_load_bitmap ("./sprites/spritesheet.png");
+	sprites.sheet = al_load_bitmap ("./resources/spritesheet.png");
 	inicializa_geral (sprites.sheet, "spritesheet");
 
-	int i,j;
+	int i,j;											
 	for (i=0 ; i<3; i++)										//pega os sprites do jogador
 		for (j=0 ; j<4 ; j++)
 			sprites.jogador[i*4 + j] = carrega_sprite(j*16, i*16, 16, 16);
@@ -64,10 +75,10 @@ void inicia_sprites ()
 
 	sprites.elHud[0] = carrega_sprite (48, 64, 16, 16);
 
-	hud = al_load_bitmap ("./sprites/hud.png");
+	hud = al_load_bitmap ("./resources/hud.png");
 	inicializa_geral (hud, "hud");
 
-	menu = al_load_bitmap ("./sprites/menu.png");
+	menu = al_load_bitmap ("./resources/menu.png");
 	inicializa_geral (menu,"menu");
 }
 
@@ -75,15 +86,15 @@ void destroi_sprites ()
 {
 	al_destroy_bitmap (sprites.sheet);
 
-	int i,j;								//destroi os sprites do jogador
+	int i,j;								//destroi os sprites do jogador	
         for (i=0 ; i<3; i++)
         	for (j=0 ; j<4 ; j++)
 			al_destroy_bitmap (sprites.jogador[i*4 + j]);
-
+                                                                                                     
         for (i=0 ; i<2 ; i++)							//destroi os sprites do mapa
         	for (j=0 ; j<3 ; j++)
 			al_destroy_bitmap (sprites.mapa[i*3 + j]);
-
+                                                                                                        
         for (i=0 ; i<2 ; i++)							//destroi os sprites dos inimigos
         	for (j=0 ; j<4 ; j++)
         		if (((i == 0)&&(j < 4)) || ((i == 1)&&(j <2)))
@@ -92,7 +103,7 @@ void destroi_sprites ()
 
 void inicia_mapa (int *portal_y, int *portal_x)
 {
-	int i,j,chance;
+	int i,j,chance;								
 
 	for (i=0 ; i<11 ; i++)							//passa por toda matriz do mapa
 	{
@@ -113,10 +124,10 @@ void inicia_mapa (int *portal_y, int *portal_x)
 
 			if ((mapa.m[i][j].tipo == PALLET) && (i > 1) && (j > 1))	//parte que poe os upgrades
 			{
-				chance = rand() % 10;
+				chance = rand() % 8;
 				if (chance == 0)					//10% de chance de um upgrade em um pallet
 				{
-					chance = rand() % 2;
+					chance = rand() % 2; 
 					if (chance == 0)
 						mapa.m[i][j].upgd = 1;
 					else
@@ -152,18 +163,22 @@ void inicia_mapa (int *portal_y, int *portal_x)
 
 void destroi_final ()
 {			//destroi tudo no final
-	al_destroy_timer	(timer  );
-	al_destroy_display	(display);
-	al_destroy_bitmap	(buffer );
-	al_destroy_event_queue  (queue  );
+	al_destroy_timer	(timer    );
+	al_destroy_display	(display  );
+	al_destroy_bitmap	(buffer   );
+	al_destroy_event_queue  (queue    );
+	al_destroy_sample       (sRobo    );
+	al_destroy_sample       (sExplosao);
+	al_destroy_sample       (sBomba   );
 }
+
 
 void inicia_vbomba ()
 {				//inicia o vetor de bombas
 	vbomba.max   = 1;
 	vbomba.quant = 0;
 	vbomba.tamf  = 1;
-	int i;
+	int i;					
 	for (i=0 ; i<5 ; i++)
 	{
 		vbomba.v[i].tempo = 0;
@@ -191,7 +206,7 @@ void malloc_mapa_vbomba_vmonstros()
 	vbomba.v    = (t_bomba *) malloc (5 * sizeof(t_bomba));
 	vmonstros.v = (t_monstro *) malloc (5 * sizeof (t_monstro));
 
-	int i;
+	int i;								
         mapa.m = (t_quadrado **) malloc (11*sizeof(t_quadrado *));
         for (i=0 ; i<11 ; i++)
         	mapa.m[i] = (t_quadrado *) malloc (11*sizeof(t_quadrado));
@@ -199,7 +214,7 @@ void malloc_mapa_vbomba_vmonstros()
 
 void reseta_vbomba ()
 {					//funcao que reseta o vetor de bombas, usada ao passar de fase
-	int i;
+	int i;					
 	for (i=0 ; i<5 ; i++)
 	{
 		vbomba.v[i].tempo = 0;

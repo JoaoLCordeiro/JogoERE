@@ -1,5 +1,6 @@
-#include "libBomMon.h"
 #include "libDefine.h"
+#include "libBomMon.h"
+#include "libTeste.h"
 
 int tem_monstro (int i, int y, int x)
 {					//funcao que testa se o lugar ja tem monstro
@@ -27,6 +28,7 @@ void coloca_bomba ( int x, int y, int *bomba)
 
 			mapa.m[ vbomba.v[ quant ].y ][ vbomba.v[ quant ].x ].tipo = BOMBA1;
 
+			al_play_sample (sBomba, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
 			vbomba.quant++;
 		}
 	}
@@ -44,6 +46,7 @@ void passa_tempo_bombas ()
 			mapa.m[ vbomba.v[i].y ][ vbomba.v[i].x ].tipo = BOMBA2;
 	}
 }
+
 
 void passa_tempo_fogos  ()
 {							//passa pela matriz e passa o tempo dos fogos
@@ -102,7 +105,7 @@ void cria_explosao (int y, int x, int tamf, int dir)
 }
 
 void inicia_explosoes (int y, int x, int tamf)
-{								//inicia uma corrente de epxlosoes, chamando a funcao recursiva cria_explosao
+{								//inicia uma corrente de epxlosoes, chamando a funcao recursiva cria_explosao 
 	mapa.m[y][x].fogo = 40;					//para cada lado que ela se espalha
 	mapa.m[y][x].tipo = LIMPO;				//tranforma o local que a bomba estava em limpo
 
@@ -168,7 +171,7 @@ void cria_monstros (int fase)
 	vmonstros.quant = quant1 + quant2 + quant3;		//pega a quantidade total de monstros
 
 	//definido o tanto de inimigos que terao na fase, vamos cria-los
-
+	
 
 	int i,x,y;
 	for (i=0 ; i < vmonstros.quant ; i++)
@@ -195,7 +198,7 @@ void cria_monstros (int fase)
 
 	}
 
-	for (i=0 ; i < vmonstros.quant ; i++)			//passa a coordenada de lugar da matriz para pixel na tela do jogo
+	for (i=0 ; i < vmonstros.quant ; i++)			//passa a coordenada de luagr da matriz para pixel na tela do jogo
 	{
 		vmonstros.v[i].y += 1;
                 vmonstros.v[i].x += 1;
@@ -233,6 +236,7 @@ void mata_monstros ()
 			vmonstros.v[i].x    = 0;
 			vmonstros.v[i].y    = 0;
 			vmonstros.v[i].tipo = 0;
+			al_play_sample (sRobo, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
 			for (j=i ; j < vmonstros.quant ; j++)		//tira o monstro queimado do vetor e traz os que estao mais adiante
 			{
 				vmonstros.v[j].dir  = vmonstros.v[j+1].dir ;

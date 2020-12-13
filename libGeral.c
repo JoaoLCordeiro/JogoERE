@@ -1,5 +1,7 @@
-#include "libGeral.h"
 #include "libDefine.h"
+#include "libGeral.h"
+#include "libTeste.h"
+#include "libDesenha.h"
 
 void interpreta_controle (unsigned char *keyb, int *x, int *y, int *dir, int *bomba, int naBomba, int *pausa, int *ajuda)
 {
@@ -15,7 +17,7 @@ void interpreta_controle (unsigned char *keyb, int *x, int *y, int *dir, int *bo
 	{
         	*y = *y + 1;
 		*dir = 2;
-	}
+	}				
 	else if(keyb[ALLEGRO_KEY_LEFT])
 	{
         	*x = *x - 1;
@@ -39,7 +41,7 @@ void interpreta_controle (unsigned char *keyb, int *x, int *y, int *dir, int *bo
 		*ajuda = 1;
 	}
 							//testa a colisao do jogador e, se colide, deixa o jogador no mesmo lugar
-	if (testa_colisao ( *x, *y, *dir, naBomba))
+	if (testa_colisao ( *x, *y, *dir, naBomba))	
 	{
 		*x = aux_x;
 		*y = aux_y;
@@ -66,14 +68,14 @@ void liga_portal (int y, int x)
 
 void faz_pausa (unsigned char *keyb, int *sair, ALLEGRO_EVENT *event)
 {
-	int j;
+	int j;													
 	int contfrm  = 0;
 	int i 	     = 0;
 	int despausa = 0;
 	while (! despausa)
 	{
 		al_wait_for_event (queue, event);
-
+                                                  
                 switch (event->type)
 		{
 			case ALLEGRO_EVENT_TIMER:
@@ -86,15 +88,15 @@ void faz_pausa (unsigned char *keyb, int *sair, ALLEGRO_EVENT *event)
 				{
 					despausa = 1;
 				}
-
+	
 				pre_escrita_display();			//desenha o menu de pausa
-
+	
 				al_draw_filled_rectangle (56, 87, 155, 121, al_map_rgb_f(0, 0, 0));
 				al_draw_textf(font, al_map_rgb(255, 255, 255), 73, 97 , 0, "CONTINUAR");
 				al_draw_textf(font, al_map_rgb(255, 255, 255), 73, 105, 0, "SAIR");
-
+	
 				al_draw_textf(font, al_map_rgb(255, 255, 255), 66, 97+7*i, 0,">");
-
+	
 				pos_escrita_display();
 
 				if (contfrm != 0)
@@ -103,11 +105,11 @@ void faz_pausa (unsigned char *keyb, int *sair, ALLEGRO_EVENT *event)
 				for( j = 0 ; j < ALLEGRO_KEY_MAX; j++ )
 	                		keyb[j] &= KEY_VISTA;
 				break;
-
-			case ALLEGRO_EVENT_KEY_DOWN:
-                		keyb[event->keyboard.keycode] = KEY_VISTA | KEY_SOLTA;
+	
+			case ALLEGRO_EVENT_KEY_DOWN:					
+                		keyb[event->keyboard.keycode] = KEY_VISTA | KEY_SOLTA;	
                 		break;
-
+                                                                                
            	     	case ALLEGRO_EVENT_KEY_UP:
                 		keyb[event->keyboard.keycode] &= KEY_SOLTA;
                 		break;
@@ -118,16 +120,16 @@ void faz_pausa (unsigned char *keyb, int *sair, ALLEGRO_EVENT *event)
 		*sair = 1;
 }
 
-void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event)
+void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event, int *code)
 {
-	int j;
+	int j;														
         int contfrm  = 0;
         int i 	     = 0;
-        int sair     = 0;
-        while (! sair)
+        int laco     = 0;
+        while (! laco)
         {
         	al_wait_for_event (queue, event);
-
+                                                  
                 switch (event->type)
         	{
         		case ALLEGRO_EVENT_TIMER:
@@ -138,49 +140,53 @@ void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event)
         			}
         			else if (keyb[ALLEGRO_KEY_ENTER])
         			{
-        				sair = 1;
+        				laco = 1;
         			}
-
+				else if (keyb[ALLEGRO_KEY_F])
+				{
+					*code = 1;
+				}
+        
         			pre_escrita_display();			//desenha o menu
-
+       
 			       	al_draw_bitmap(menu, 0, 0, 0);
         			al_draw_textf(font, al_map_rgb(255, 255, 255), 113, 97 , 0, "INICIAR");
         			al_draw_textf(font, al_map_rgb(255, 255, 255), 113, 105, 0, "SAIR");
-
+        
         			al_draw_textf(font, al_map_rgb(255, 255, 255), 106, 97+8*i, 0,">");
-
+        
         			pos_escrita_display();
-
+                                                                                                                
         			if (contfrm != 0)
         				contfrm--;
-
+                                                                                                                
         			for( j = 0 ; j < ALLEGRO_KEY_MAX; j++ )
                         		keyb[j] &= KEY_VISTA;
         			break;
-
-        		case ALLEGRO_EVENT_KEY_DOWN:
-                		keyb[event->keyboard.keycode] = KEY_VISTA | KEY_SOLTA;
+        
+        		case ALLEGRO_EVENT_KEY_DOWN:					
+                		keyb[event->keyboard.keycode] = KEY_VISTA | KEY_SOLTA;	
                 		break;
-
+                                                                                
            	     	case ALLEGRO_EVENT_KEY_UP:
                 		keyb[event->keyboard.keycode] &= KEY_SOLTA;
                 		break;
         	}
         }
 
-	if (i)
+	if (i == 1)
 		*fechar = 1;
 }
 
 void faz_ajuda (unsigned char *keyb, ALLEGRO_EVENT *event)
 {
-	int j;
+	int j;														
         int contfrm  = 0;
         int sair     = 0;
         while (! sair)
         {
         	al_wait_for_event (queue, event);
-
+                                                  
                 switch (event->type)
         	{
         		case ALLEGRO_EVENT_TIMER:
@@ -189,29 +195,29 @@ void faz_ajuda (unsigned char *keyb, ALLEGRO_EVENT *event)
         				sair = 1;
 					contfrm = 30;
         			}
-
+        
         			pre_escrita_display();			//desenha o menu de ajuda
-
+                                                                                                                        
         		       	al_draw_filled_rectangle(0, 73, 208, 130, al_map_rgb_f(0, 0, 0));
         			al_draw_textf(font, al_map_rgb(255, 255, 255), 5, 84 , 0, "PARA ANDAR, USE AS SETAS");
         			al_draw_textf(font, al_map_rgb(255, 255, 255), 5, 92 , 0, "PARA POR BOMBA, ESPACO");
 				al_draw_textf(font, al_map_rgb(255, 255, 255), 5, 100, 0, "ESC PAUSA, ETR SAI D HELP");
 				al_draw_textf(font, al_map_rgb(255, 255, 255), 5, 108, 0, "MATE TODOS OS INIMIGOS");
 				al_draw_textf(font, al_map_rgb(255, 255, 255), 5, 116, 0, "ENCONTRE O PORTAL");
-
+        
         			pos_escrita_display();
-
+                                                                                                                
         			if (contfrm != 0)
         				contfrm--;
-
+                                                                                                                
         			for( j = 0 ; j < ALLEGRO_KEY_MAX; j++ )
                         		keyb[j] &= KEY_VISTA;
         			break;
-
-        		case ALLEGRO_EVENT_KEY_DOWN:
-                		keyb[event->keyboard.keycode] = KEY_VISTA | KEY_SOLTA;
+        
+        		case ALLEGRO_EVENT_KEY_DOWN:					
+                		keyb[event->keyboard.keycode] = KEY_VISTA | KEY_SOLTA;	
                 		break;
-
+                                                                                
            	     	case ALLEGRO_EVENT_KEY_UP:
                 		keyb[event->keyboard.keycode] &= KEY_SOLTA;
                 		break;

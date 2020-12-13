@@ -1,5 +1,6 @@
-#include "libTeste.h"
 #include "libDefine.h"
+#include "libTeste.h"
+#include "libGeral.h"
 
 int testa_mapa (int y, int x, int naBomba)
 {						//testa o mapa para ver se o jogador pode entrar no local
@@ -168,7 +169,7 @@ int testa_colisao_monstro (int y1, int y2, int x1, int x2, int dir, int tipo)
 			break;
 
 		case (2):
-			if (tipo < 3)
+			if (tipo < 3)									
                         {
                         	if ((mapa.m[y2][x1].tipo != LIMPO) || (mapa.m[y2][x2].tipo != LIMPO))
                         		return 1;
@@ -184,7 +185,7 @@ int testa_colisao_monstro (int y1, int y2, int x1, int x2, int dir, int tipo)
 			break;
 
 		case (3):
-			if (tipo < 3)
+			if (tipo < 3)									
                         {
                         	if ((mapa.m[y1][x1].tipo != LIMPO) || (mapa.m[y2][x1].tipo != LIMPO))
                         		return 1;
@@ -193,14 +194,14 @@ int testa_colisao_monstro (int y1, int y2, int x1, int x2, int dir, int tipo)
                         {
                         	if ((mapa.m[y1][x1].tipo == MURO) || (mapa.m[y2][x1].tipo == MURO))
 					return 1;
-				if ((mapa.m[y1][x1].tipo >= BOMBA1) || (mapa.m[y2][x1].tipo >= BOMBA1))
+				if ((mapa.m[y1][x1].tipo >= BOMBA1) || (mapa.m[y2][x1].tipo >= BOMBA1))	
                         		return 1;
                         }
 
 			break;
 
 		case (4):
-			if (tipo < 3)
+			if (tipo < 3)									
                         {
                         	if ((mapa.m[y1][x2].tipo != LIMPO) || (mapa.m[y2][x2].tipo != LIMPO))
                         		return 1;

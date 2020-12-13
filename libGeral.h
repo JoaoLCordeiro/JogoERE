@@ -11,8 +11,10 @@ void liga_portal (int y, int x);
 
 void faz_pausa (unsigned char *keyb, int *sair, ALLEGRO_EVENT *event);
 
-void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event);
+void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event, int *code);
 
 void faz_ajuda (unsigned char *keyb, ALLEGRO_EVENT *event);
+
+void inicia_score (FILE *score);
 
 #endif

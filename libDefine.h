@@ -84,6 +84,9 @@ ALLEGRO_EVENT_QUEUE*	queue;
 ALLEGRO_FONT*		font;
 ALLEGRO_BITMAP* 	hud;
 ALLEGRO_BITMAP*  	menu;
+ALLEGRO_SAMPLE*		sRobo;
+ALLEGRO_SAMPLE*		sExplosao;
+ALLEGRO_SAMPLE*		sBomba;
 
 t_sprites 		sprites;
 t_mapa 	  		mapa;
