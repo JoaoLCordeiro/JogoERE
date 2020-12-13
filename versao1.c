@@ -8,7 +8,7 @@
 #include <allegro5/allegro_acodec.h>
 #include <allegro5/allegro_image.h>
 
-#define BUFFER_H 208				//Tamanho dos pixels * blocos de altura
+#define BUFFER_H 208				//Tamanho dos pixels * blocos de altura		
 #define BUFFER_W 208				//Tamanho dos pixels * blocos de largura
 
 #define DISPLAY_S 4				//Escala que o buffer aumenta para o display
@@ -58,7 +58,7 @@ typedef struct t_monstro
 
 typedef struct t_vmonstros
 {
-	int quant;
+	int quant;									
 	t_monstro *v;
 } t_vmonstros;
 
@@ -86,6 +86,10 @@ ALLEGRO_EVENT_QUEUE*	queue;
 ALLEGRO_FONT*		font;
 ALLEGRO_BITMAP* 	hud;
 ALLEGRO_BITMAP*  	menu;
+ALLEGRO_SAMPLE*		sRobo;
+ALLEGRO_SAMPLE*		sExplosao;
+ALLEGRO_SAMPLE*		sBomba;
+ALLEGRO_AUDIO_STREAM*   musica;
 
 t_sprites 		sprites;
 t_mapa 	  		mapa;
@@ -104,12 +108,8 @@ void inicializa_geral (bool resultado, const char *testado)
 	}
 }
 
-void inicia_comeco ()//!!!!! pensar num nome melhor
+void inicia_comeco ()
 {
-	//!!!!!linhas que suavizam o grafico, testar
-	//al_set_new_display_option (ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
-	//al_set_new_display_option (ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
-
 	inicializa_geral (al_init(), "allegro");			//inicializa o allegro em si e o teclado
 	inicializa_geral (al_install_keyboard(), "keyboard");
 
@@ -128,8 +128,22 @@ void inicia_comeco ()//!!!!! pensar num nome melhor
 	font    = al_create_builtin_font ();
 	inicializa_geral (font   , "font"   );
 
-	inicializa_geral (al_init_primitives_addon(), "primitives");	//inicializa o primitives
+	inicializa_geral (al_install_audio(), "audio");			//inicia o audio
+	inicializa_geral (al_init_acodec_addon(), "acodec");
+	inicializa_geral (al_reserve_samples(16), "reserve samples");
+	inicializa_geral (al_init_primitives_addon(), "primitives");	//inicializa as imagens
 	inicializa_geral (al_init_image_addon(), "image addon");
+
+	sRobo     = al_load_sample ("./resources/robomorte.wav");	//inicializa os sons
+	sExplosao = al_load_sample ("./resources/explosao.wav" );
+	sBomba	  = al_load_sample ("./resources/bomba.wav"    );
+	inicializa_geral (sRobo    , "sample robo"    );
+	inicializa_geral (sExplosao, "sample explosao");
+	inicializa_geral (sBomba   , "sample bomba"   );
+
+	musica    = al_load_audio_stream ("./resources/music.opus", 2, 2048);
+        inicializa_geral (musica   , "musica");
+        al_attach_audio_stream_to_mixer (musica, al_get_default_mixer());
 }
 
 ALLEGRO_BITMAP* carrega_sprite (int x, int y, int w, int h)
@@ -141,7 +155,7 @@ ALLEGRO_BITMAP* carrega_sprite (int x, int y, int w, int h)
 
 void inicia_sprites ()
 {
-	sprites.sheet = al_load_bitmap ("./sprites/spritesheet.png");
+	sprites.sheet = al_load_bitmap ("./resources/spritesheet.png");
 	inicializa_geral (sprites.sheet, "spritesheet");
 
 	int i,j;											
@@ -160,10 +174,10 @@ void inicia_sprites ()
 
 	sprites.elHud[0] = carrega_sprite (48, 64, 16, 16);
 
-	hud = al_load_bitmap ("./sprites/hud.png");
+	hud = al_load_bitmap ("./resources/hud.png");
 	inicializa_geral (hud, "hud");
 
-	menu = al_load_bitmap ("./sprites/menu.png");
+	menu = al_load_bitmap ("./resources/menu.png");
 	inicializa_geral (menu,"menu");
 }
 
@@ -209,7 +223,7 @@ void inicia_mapa (int *portal_y, int *portal_x)
 
 			if ((mapa.m[i][j].tipo == PALLET) && (i > 1) && (j > 1))	//parte que poe os upgrades
 			{
-				chance = rand() % 10;
+				chance = rand() % 8;
 				if (chance == 0)					//10% de chance de um upgrade em um pallet
 				{
 					chance = rand() % 2; 
@@ -266,10 +280,14 @@ void desenha_mapa ()
 			}
 			else								//se for explosao
 			{
-				if ((mapa.m[i][j].fogo > 10)&&(mapa.m[i][j].fogo < 31))			//printa o fogo menor
+				if ((mapa.m[i][j].fogo > 10)&&(mapa.m[i][j].fogo < 31))			//printa o fogo maior
 					al_draw_bitmap (sprites.mapa[ 8 ], 16 + j*16, 16 + i*16, 0);
-				else if (mapa.m[i][j].fogo < 41)					//printa o fogo maior
+				else if (mapa.m[i][j].fogo < 41)					//printa o fogo menor
+				{
 					al_draw_bitmap (sprites.mapa[ 9 ], 16 + j*16, 16 + i*16, 0);
+					if (mapa.m[i][j].fogo == 40)
+						al_play_sample (sExplosao, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+				}
 			}
 		}
 }
@@ -289,10 +307,14 @@ void pos_escrita_display ()
 
 void destroi_final ()
 {			//destroi tudo no final
-	al_destroy_timer	(timer  );
-	al_destroy_display	(display);
-	al_destroy_bitmap	(buffer );
-	al_destroy_event_queue  (queue  );
+	al_destroy_timer	(timer    );
+	al_destroy_display	(display  );
+	al_destroy_bitmap	(buffer   );
+	al_destroy_event_queue  (queue    );
+	al_destroy_sample       (sRobo    );
+	al_destroy_sample       (sExplosao);
+	al_destroy_sample       (sBomba   );
+	al_destroy_audio_stream (musica   );
 }
 
 int testa_mapa (int y, int x, int naBomba)
@@ -444,6 +466,7 @@ void coloca_bomba ( int x, int y, int *bomba)
 
 			mapa.m[ vbomba.v[ quant ].y ][ vbomba.v[ quant ].x ].tipo = BOMBA1;
 
+			al_play_sample (sBomba, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
 			vbomba.quant++;
 		}
 	}
@@ -897,6 +920,7 @@ void mata_monstros ()
 			vmonstros.v[i].x    = 0;
 			vmonstros.v[i].y    = 0;
 			vmonstros.v[i].tipo = 0;
+			al_play_sample (sRobo, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
 			for (j=i ; j < vmonstros.quant ; j++)		//tira o monstro queimado do vetor e traz os que estao mais adiante
 			{
 				vmonstros.v[j].dir  = vmonstros.v[j+1].dir ;
@@ -1129,7 +1153,7 @@ void faz_pausa (unsigned char *keyb, int *sair, ALLEGRO_EVENT *event)
 		*sair = 1;
 }
 
-void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event)
+void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event, int *code)
 {
 	int j;														
         int contfrm  = 0;
@@ -1151,6 +1175,10 @@ void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event)
         			{
         				sair = 1;
         			}
+				else if (keyb[ALLEGRO_KEY_F])
+				{
+					*code = 1;
+				}
         
         			pre_escrita_display();			//desenha o menu
        
@@ -1179,7 +1207,7 @@ void faz_menu (int *fechar, unsigned char *keyb, ALLEGRO_EVENT *event)
         	}
         }
 
-	if (i)
+	if (i == 1)
 		*fechar = 1;
 }
 
@@ -1230,6 +1258,13 @@ void faz_ajuda (unsigned char *keyb, ALLEGRO_EVENT *event)
         }
 }
 
+void inicia_musica ()
+{
+	musica    = al_load_audio_stream ("./resources/music.opus", 2, 2048);
+        inicializa_geral (musica   , "musica");
+        al_attach_audio_stream_to_mixer (musica, al_get_default_mixer());
+}
+
 int main ()
 {
 	inicia_comeco ();
@@ -1261,6 +1296,7 @@ int main ()
 	int pausa     = 0;
 	int ajuda     = 0;
 	int sair      = 0;
+	int code      = 0;
 
 	int portal_x  = 0;		//variaveis que guardam a coordenada do portal
 	int portal_y  = 0;
@@ -1279,13 +1315,19 @@ int main ()
 	inicia_vbomba ();
 	inicia_vmonstros ();
 	al_start_timer (timer);
-	while ((! fechar) && (! morte))	//loop do jogo inteiro com menu e tudo
+	while (! fechar)	//loop do jogo inteiro com menu e tudo
 	{
 		pontos = 0;
 
-		faz_menu (&fechar, keyb, &event);
+		faz_menu (&fechar, keyb, &event, &code);
 
-		while ((! morte) && (! sair))		//loop do jogo com as fases
+		if (code)
+		{
+			vbomba.max  = 5 ;
+			vbomba.tamf = 10;
+		}
+
+		while ((! morte) && (! sair) && (!fechar))		//loop do jogo com as fases
 		{
 			inicia_mapa (&portal_y, &portal_x);
 			reseta_vbomba ();
@@ -1295,7 +1337,7 @@ int main ()
 			{
 				pre_escrita_display();
 				
-				al_draw_filled_rectangle (0, 0, 208, 208, al_map_rgb_f(0, 0, 0));
+				al_draw_filled_rectangle (0, 0, 208, 208, al_map_rgb_f(0, 0, 0));		
 				al_draw_textf(font, al_map_rgb(255, 255, 255), 83, 100, 0, "FASE %d", fase);
 				contfrmj++;
 
@@ -1367,7 +1409,7 @@ int main ()
 		   	 		case ALLEGRO_EVENT_KEY_UP:
         					keyb[event.keyboard.keycode] &= KEY_SOLTA;
 	        				break;
-				}
+				}	
 
 				if ((desenha) && (al_is_event_queue_empty (queue)))
 				{
@@ -1386,6 +1428,25 @@ int main ()
 				}
 			}
 
+			if (morte)
+			{
+				contfrmj = 0;
+				while (contfrmj != 180)
+				{
+					pre_escrita_display();
+
+					al_draw_filled_rectangle (0, 0, 208, 208, al_map_rgb_f(0, 0, 0));
+					al_draw_textf (font, al_map_rgb(255, 255, 255), 40, 50, 0, "VOCE FOI DESTRUIDO");
+					if (contfrmj < 120)
+						al_draw_bitmap (sprites.jogador[ 7 +  contfrmj/30 ], 96, 96, 0);
+					else
+						al_draw_bitmap (sprites.jogador[11], 96, 96, 0);
+
+					pos_escrita_display();
+					contfrmj++;
+				}
+			}
+
 			if (passou)
 			{
 				pontos += 1000;
@@ -1394,7 +1455,23 @@ int main ()
 			}
 
 			if (fase > 5)
+			{
+				contfrmj = 60;
+				while (contfrmj != 0)
+				{
+					pre_escrita_display();
+
+					al_draw_filled_rectangle (0, 0, 208, 208, al_map_rgb_f(0, 0, 0));
+					if (code)
+						al_draw_textf(font, al_map_rgb(255, 255, 255), 30, 100, 0, "TRAPACEADOR NAO VENCE");
+					else
+                                        	al_draw_textf(font, al_map_rgb(255, 255, 255), 30, 100, 0, "OS REBELDES VENCERAM!");
+
+					pos_escrita_display();
+					contfrmj--;
+				}
 				sair = 1;
+			}
 
 			passou = 0;	
 			jogador_x = 16;
