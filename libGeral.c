@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "libDefine.h"
 #include "libGeral.h"
 #include "libTeste.h"
@@ -5,7 +6,7 @@
 
 void interpreta_controle (unsigned char *keyb, int *x, int *y, int *dir, int *bomba, int naBomba, int *pausa, int *ajuda)
 {
-	int aux_x = *x;				//funcao que interpreta o input do jogador dentro do jogo e movimenta o personagem
+	int aux_x = *x;				//funcao que interpreta o input do jogador dentro do jogo, movimenta o personagem e mexe algumas flags
 	int aux_y = *y;
 
 	if(keyb[ALLEGRO_KEY_UP])
@@ -223,4 +224,40 @@ void faz_ajuda (unsigned char *keyb, ALLEGRO_EVENT *event)
                 		break;
         	}
         }
+}
+
+void inicia_score (FILE *score)
+{
+	int i;
+	for (i=0 ; i<10 ; i++)
+		fprintf (score, "0\n");
+}
+
+void pega_score (FILE *file, int *vetor)
+{
+	int i;
+	rewind (file);
+
+	for (i=0 ; i<10 ; i++)
+		fscanf (file, "%d\n", &vetor[i]);
+}
+
+void adiciona_score (FILE *file, int *vetor, int pontos)
+{
+	int i,aux;
+	vetor[9] = pontos;
+	for (i=8 ; i >= 0 ; i--)
+	{
+		if (vetor[i] < vetor[i+1])
+		{
+			aux = vetor[i];
+			vetor[i] = vetor[i+1];
+			vetor[i+1] = aux;
+		}
+	}
+
+	for (i=0 ; i<10 ; i++)
+	{
+		fprintf (file, "%d\n", vetor[i]);
+	}
 }

@@ -204,12 +204,35 @@ void inicia_vmonstros ()
 void malloc_mapa_vbomba_vmonstros()
 {					//funcao que faz o malloc dos vetores de bomba e monstros
 	vbomba.v    = (t_bomba *) malloc (5 * sizeof(t_bomba));
+	if (! vbomba.v)
+	{
+		perror ("o vetor de bombas nao pode ser alocado");
+		exit (1);
+	}
+
 	vmonstros.v = (t_monstro *) malloc (5 * sizeof (t_monstro));
+	if (! vmonstros.v)
+	{
+		perror ("o vetor de monstros nao pode ser alocado");
+		exit (1);
+	}
 
 	int i;								
         mapa.m = (t_quadrado **) malloc (11*sizeof(t_quadrado *));
+	if (! mapa.m)
+	{
+		perror ("o primeiro malloc da matriz do mapa nao pode ser feito");
+		exit (1);
+	}
         for (i=0 ; i<11 ; i++)
+	{
         	mapa.m[i] = (t_quadrado *) malloc (11*sizeof(t_quadrado));
+		if (! mapa.m[i])
+		{
+			perror ("um dos mallocs do for da matriz do mapa nao pode ser feito");
+			exit (1);
+		}
+	}
 }
 
 void reseta_vbomba ()

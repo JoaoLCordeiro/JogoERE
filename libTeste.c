@@ -1,4 +1,5 @@
 #include "libDefine.h"
+#include <stdio.h>
 #include "libTeste.h"
 #include "libGeral.h"
 
